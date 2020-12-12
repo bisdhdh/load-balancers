@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2020-11-03T22:34:49.010097+00:00",
+  "timestamp": "2020-12-12T00:10:48.508473+00:00",
   "repo": "quicwg/load-balancers",
   "labels": [
     {
@@ -148,7 +148,7 @@
       "id": "MDU6SXNzdWU1NzM2MjQzMDg=",
       "title": "Unguessable connection IDs",
       "url": "https://github.com/quicwg/load-balancers/issues/8",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "martinthomson",
       "authorAssociation": "MEMBER",
       "assignees": [],
@@ -157,8 +157,8 @@
       ],
       "body": "There is a requirement that it be difficult for a party other than the server and load balancer to guess a CID that will be accepted as valid for a target connection.\r\n\r\nThis requirement needs to be validated for the schemes described in the draft.  This might impose some constraints on the designs chosen.\r\n\r\nFor instance, I don't believe that the plaintext algorithm meets this goal.  The server ID can take all the available space, which is probably wrong.  Clearly it is impossible to create sufficient connection IDs for even a single connection if there is only one valid identifier per server.  However, it might be argued that even an 18 byte server ID makes it too easy to guess a valid connection ID for a connection (just 16 guesses would be enough to get a 50% chance at that).  So it seems to me that a shorter connection ID is necessary.\r\n\r\nThe same applies to any attempt at obfuscation.\r\n\r\nThe encrypted versions might be similarly challenging to get right.  The For Server Use field in the stream cipher variant needs to be sufficiently long as to avoid engineered collisions.  The value used for the stream cipher is malleable, which means that an attacker isn't prevented from guessing.  In many ways, this is more challenging than the plaintext variant because the nonce consumes space.\r\n\r\nThe zero-padding in the block cipher mode might be the best way of preventing guessing, if it were sufficiently long.  Similarly, if \"Encrypted bits for server use\" were sufficiently sparsely populated, then guessing can be hard enough.",
       "createdAt": "2020-03-01T22:06:18Z",
-      "updatedAt": "2020-07-03T18:15:43Z",
-      "closedAt": null,
+      "updatedAt": "2020-12-11T23:35:02Z",
+      "closedAt": "2020-12-11T23:35:02Z",
       "comments": [
         {
           "author": "nibanks",
@@ -201,6 +201,13 @@
           "body": "To summarize the issue with Plaintext CID. This is the easiest to implement, so is mostly likely to be adopted.\r\n\r\nHowever:\r\n1) This makes DoS attacks on a single server quite straightforward. There is no consensus as to whether single-server DoS is a threat to mitigate or not.\r\n2) Makes connection IDs more linkable.\r\n3) Unless we add a server transport parameter for it, the client has no idea they're more linkable.\r\n4) We could prohibit migration to fix the linkability problem.\r\n5) If we prohibit migration, than the only reason to do plaintext CIDs, instead of just 5-tuple routing, is to support NAT rebinding.\r\n\r\nTo some extent, Obfuscated CID might have similar issues.",
           "createdAt": "2020-07-03T18:15:43Z",
           "updatedAt": "2020-07-03T18:15:43Z"
+        },
+        {
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "The discussion at IETF 109 suggested that the level of linkability associated with the PCID algorithm did not violate the spirit of quic-transport (see @martinthomson and @ianswett in the QUIC-LB segment here: https://datatracker.ietf.org/meeting/109/materials/minutes-109-quic-00)",
+          "createdAt": "2020-12-11T23:35:02Z",
+          "updatedAt": "2020-12-11T23:35:02Z"
         }
       ]
     },
@@ -294,7 +301,7 @@
       "id": "MDU6SXNzdWU1NzQzMTUyMzE=",
       "title": "Configuration ID might be too small",
       "url": "https://github.com/quicwg/load-balancers/issues/12",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "martinthomson",
       "authorAssociation": "MEMBER",
       "assignees": [],
@@ -303,8 +310,8 @@
       ],
       "body": "As server clusters increase in size, the need to reallocate server identifiers becomes more acute. \r\n\r\nIn one model, the configuration ID is used to indicate a stable routing configuration.  Server identifiers for a given configuration ID are routed to the same server, no matter how many other instances are added or removed.  In order to allow for changes in the cluster, the configuration ID is used so that old servers can be removed from consideration and new ones added.\r\n\r\nIf these changes happen frequently enough, the number of bits allocated to identifying a configuration might be insufficient.  Why not make the length of the identifier flexible?  That might mean that you need to make the length of the length similarly configurable.",
       "createdAt": "2020-03-02T23:28:35Z",
-      "updatedAt": "2020-10-28T21:36:03Z",
-      "closedAt": null,
+      "updatedAt": "2020-12-11T23:36:47Z",
+      "closedAt": "2020-12-11T23:36:47Z",
       "comments": [
         {
           "author": "martinduke",
@@ -333,6 +340,20 @@
           "body": "Alright, I've reflected on this a bit more.\r\n\r\nIn general, different server entities will have different external IP addresses and/or ports, so the load balancer can distinguish the correct QUIC-LB config without resorting to the CR bits. As IP and port are visible to everyone, there is no privacy leakage.\r\n\r\nThe problem occurs when mutually mistrustful servers share the same IP/port and are switched on something else. That \"something\" may be something present only in the client hello, with the classical load balancer simply using the 4tuple after that. The only thing I am aware of in practice is the SNI. If there are others, please say so in this thread.\r\n\r\nIf the SNI is encrypted, the unprivileged LB envisioned in QUIC-LB does not have access to it. So we can assume this use case only applies to unencrypted SNI.\r\n\r\nOption 1: mistrustful servers share the same config. a third party will be able to extract your server mapping, but in practice it will be hard for an attacker to obtain this position on purpose. If this is the best outcome, we can stick with 2 config rotation bits.\r\n\r\nOption 2: Issue them different config rotation codepoints. So an observer can see the SNI and associate it with certain CR bits; if the client later migrates, it will still be able to associate that connection with that SNI. If this is better than Option 1, we should probably add a third config rotation bit.\r\n\r\nOther (minor) costs of having 3 config rotation bits:\r\n- length self-encoding can only support 31 byte connection IDs, instead of 63 (obviously this is only relevant for hypothetical future versions of QUIC)\r\n- each config can have its own set of server IDs. So there is considerably more config state at the LB. As SIDs can be up to 18B, it's 18B x (# of servers) x (# of config rotation codepoints). This memory footprint will roughly double by going from 3 to 7 codepoints.\r\n\r\nI've talked myself into Option 1 as being a mildly better situation, thus sticking with 2 CR bits.\r\n\r\n\r\n\r\n",
           "createdAt": "2020-10-28T21:36:02Z",
           "updatedAt": "2020-10-28T21:36:02Z"
+        },
+        {
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Update: the ECHO design might allow the LB privileged access to the SNI, so it might be encrypted. However, an attacker could connect to the domains at that IP and obtain the config rotation bits. So option 2 actually circumvents ESNI entirely!",
+          "createdAt": "2020-11-18T00:34:07Z",
+          "updatedAt": "2020-11-18T00:34:07Z"
+        },
+        {
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Closing -- I have received no pushback on doing nothing (leaving it at 2 bits), so I'm going to do nothing.",
+          "createdAt": "2020-12-11T23:36:47Z",
+          "updatedAt": "2020-12-11T23:36:47Z"
         }
       ]
     },
@@ -341,7 +362,7 @@
       "id": "MDU6SXNzdWU1ODc5NDQ5Njc=",
       "title": "Giving the client more information",
       "url": "https://github.com/quicwg/load-balancers/issues/16",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "martinduke",
       "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
@@ -350,9 +371,17 @@
       ],
       "body": "QUIC-LB has a bit of an incentive mismatch. The server infrastructure decides how linkable the CID algorithm is, but the client bears most of the cost of the CIDs being linkable. Worse yet, the client has no idea, without a lot of effort, what the servers are doing. Even worse, the servers have some incentives to pick something that's easily linkable.\r\n\r\nIn Section 8, it says:\r\n\r\n> Servers that are running the Plaintext CID algorithm SHOULD only use it to generate new CIDs for the Server Initial Packet and SHOULD NOT send CIDs in QUIC NEW_CONNECTION_ID frames\r\n\r\nThis is a concise way of not giving the client tools to link itself by trying an unsafe migration.\r\n\r\nWe could just stick with that. A richer way to go would be to create a new transport parameter (e.g. cid_is_linkable, cid_not_encrypted) that would explicitly communicate the risks to the client. We could have a different value for OCID or batch PCID and OCID together.\r\n",
       "createdAt": "2020-03-25T19:41:47Z",
-      "updatedAt": "2020-05-26T18:10:25Z",
-      "closedAt": null,
-      "comments": []
+      "updatedAt": "2020-12-11T23:32:07Z",
+      "closedAt": "2020-12-11T23:32:07Z",
+      "comments": [
+        {
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Due to lack of enthusiasm at IETF 109, closing this issue.",
+          "createdAt": "2020-12-11T23:32:07Z",
+          "updatedAt": "2020-12-11T23:32:07Z"
+        }
+      ]
     },
     {
       "number": 20,
@@ -628,7 +657,7 @@
       "labels": [],
       "body": "Section 5.3 specifies a  Shared-State Retry Service describes a token format in which the token include the ODCID, a client IP encoded on 128 bits, and a 20 octets data-time, plus additional data. The token is encrypted using AES ECB. This seems sub-optimal:\r\n\r\n1) Using AES GCM or another AEAD format seems more natural. AEAD checks will immediately detect an invalid token, while using ECB forces reliance on invalidity heuristics.\r\n\r\n2) If using AEAD, there is no need to encode the IP address in the token. It can be derived from the IP header and placed in a pseudo header. The pseudo header can then be authenticated as part of AEAD decryption.\r\n\r\n3) The pseudo header approach can be used to authenticate other fields, e.g. verify that the DCID matches the SCID sent in the Retry packet.\r\n\r\n4) Encoding the time as 64 bits time64_t seems more natural than ASCII encoding, and also shorter.\r\n",
       "createdAt": "2020-07-01T23:03:07Z",
-      "updatedAt": "2020-11-03T19:43:57Z",
+      "updatedAt": "2020-11-04T02:31:21Z",
       "closedAt": null,
       "comments": [
         {
@@ -665,6 +694,20 @@
           "body": "@huitema Could I trouble you for a PR on this?",
           "createdAt": "2020-11-03T19:43:57Z",
           "updatedAt": "2020-11-03T19:43:57Z"
+        },
+        {
+          "author": "huitema",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Sure. I can basically propose what I am doing in picoquic.\r\nAnd yes, the repetitive nature of ECB enables attacks.",
+          "createdAt": "2020-11-04T00:43:36Z",
+          "updatedAt": "2020-11-04T00:43:36Z"
+        },
+        {
+          "author": "huitema",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@martinduke please review PR #59",
+          "createdAt": "2020-11-04T02:31:20Z",
+          "updatedAt": "2020-11-04T02:31:20Z"
         }
       ]
     },
@@ -1021,15 +1064,15 @@
       "id": "MDU6SXNzdWU3MDA5MTMxOTU=",
       "title": "Keepalive design discussion",
       "url": "https://github.com/quicwg/load-balancers/issues/53",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "william-zk",
       "authorAssociation": "NONE",
       "assignees": [],
       "labels": [],
       "body": "Hi author:\r\n    Will quic-lb design Keepalive mechanism next? Surely it's a very important mechanism in load balancer.",
       "createdAt": "2020-09-14T09:00:56Z",
-      "updatedAt": "2020-11-03T19:15:50Z",
-      "closedAt": null,
+      "updatedAt": "2020-11-04T02:16:47Z",
+      "closedAt": "2020-11-04T02:16:47Z",
       "comments": [
         {
           "author": "martinduke",
@@ -1044,6 +1087,13 @@
           "body": "Any further response to this?",
           "createdAt": "2020-11-03T19:15:49Z",
           "updatedAt": "2020-11-03T19:15:49Z"
+        },
+        {
+          "author": "william-zk",
+          "authorAssociation": "NONE",
+          "body": "Thanks for answering",
+          "createdAt": "2020-11-04T02:16:47Z",
+          "updatedAt": "2020-11-04T02:16:47Z"
         }
       ]
     },
@@ -1118,6 +1168,55 @@
           "updatedAt": "2020-11-03T19:05:45Z"
         }
       ]
+    },
+    {
+      "number": 60,
+      "id": "MDU6SXNzdWU3NDUxOTc1OTg=",
+      "title": "SNI switching",
+      "url": "https://github.com/quicwg/load-balancers/issues/60",
+      "state": "OPEN",
+      "author": "martinduke",
+      "authorAssociation": "CONTRIBUTOR",
+      "assignees": [],
+      "labels": [
+        "editorial"
+      ],
+      "body": "Some load balancers today switch based on the SNI. Obviously, this is not version-invariant. We should add some language about this.\r\n\r\nWhat should such an LB when it encounters an unknown version? It probably has no choice but to forward it based on CID and hope for the best.",
+      "createdAt": "2020-11-18T00:45:39Z",
+      "updatedAt": "2020-12-11T03:09:30Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "If the differing domains trust each other, the servers could helpfully generate Retry packets to redirect the client to the right place. This assumes a bunch of shared state, and that those servers support the same version while the LB does not.\r\n\r\nOf course, if version support differs, the VN process has serious problems.",
+          "createdAt": "2020-11-18T00:53:09Z",
+          "updatedAt": "2020-11-18T00:53:09Z"
+        },
+        {
+          "author": "william-zk",
+          "authorAssociation": "NONE",
+          "body": "Maybe encrypt sni will be the real standard later(see https://tools.ietf.org/html/draft-ietf-tls-esni-08), I just think that there is no need for quic lb considering sni",
+          "createdAt": "2020-12-11T03:08:42Z",
+          "updatedAt": "2020-12-11T03:09:30Z"
+        }
+      ]
+    },
+    {
+      "number": 62,
+      "id": "MDU6SXNzdWU3NjE1NTYzMDk=",
+      "title": "Add Acknowledgments",
+      "url": "https://github.com/quicwg/load-balancers/issues/62",
+      "state": "OPEN",
+      "author": "martinduke",
+      "authorAssociation": "CONTRIBUTOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Martin Thomson\r\nChristian Huitema\r\n\r\nothers I'm missing?",
+      "createdAt": "2020-12-10T19:43:45Z",
+      "updatedAt": "2020-12-10T19:43:45Z",
+      "closedAt": null,
+      "comments": []
     }
   ],
   "pulls": [
@@ -2354,21 +2453,21 @@
       "id": "MDExOlB1bGxSZXF1ZXN0NDQzNzcxNzIw",
       "title": "One more config rotation bit.",
       "url": "https://github.com/quicwg/load-balancers/pull/37",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "martinduke",
       "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "Fixes #12.\r\n\r\nAlso addresses another version assumption and deletes a reference to the in-band protocol.",
       "createdAt": "2020-07-02T22:41:50Z",
-      "updatedAt": "2020-07-06T19:34:20Z",
+      "updatedAt": "2020-12-12T00:06:47Z",
       "baseRepository": "quicwg/load-balancers",
       "baseRefName": "master",
       "baseRefOid": "267ac4ad19c5326373311640e90a5c8d0ecfaad0",
       "headRepository": "quicwg/load-balancers",
       "headRefName": "more-configs",
       "headRefOid": "40320c1c6ab0b8bc0910764b97ab67398058622b",
-      "closedAt": null,
+      "closedAt": "2020-12-12T00:06:47Z",
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
@@ -2428,6 +2527,13 @@
           "body": ">> That's not the concern. The issue is that some of the servers behind the LB might not be trustworthy in terms of being able to link your clients. (e.g. a hosting service with multiple customers.)\r\n\r\nCare to explain a bit more? You are maybe pointing here at deployment considerations. There seems to be several deployment cases:\r\n\r\n1) The \"example.com\" company manages its own pool of servers, \r\n\r\n2) The content delivery company \"example.net\" manages a bunch of edge servers that serve content for a variety of customers\r\n\r\n3) The hosting company \"example.example\" provides virtual machines to a bunch of customers with additional services like load balancing, firewall or DDoS protection.\r\n\r\nIn all these cases, there are different trust levels. It seems that the draft is making hidden assumptions about these levels. You may want to add something like \"deployment considerations\".\r\n",
           "createdAt": "2020-07-03T23:39:06Z",
           "updatedAt": "2020-07-03T23:39:06Z"
+        },
+        {
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Closed #12 with no action, so closing this too.",
+          "createdAt": "2020-12-12T00:06:47Z",
+          "updatedAt": "2020-12-12T00:06:47Z"
         }
       ],
       "reviews": [
@@ -2900,26 +3006,336 @@
       "id": "MDExOlB1bGxSZXF1ZXN0NTE1MDI3NTEy",
       "title": "Added transport parameter",
       "url": "https://github.com/quicwg/load-balancers/pull/58",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "martinduke",
       "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "Addresses #8 and #16.",
       "createdAt": "2020-11-03T22:34:37Z",
-      "updatedAt": "2020-11-03T22:34:37Z",
+      "updatedAt": "2020-12-11T23:31:40Z",
       "baseRepository": "quicwg/load-balancers",
       "baseRefName": "master",
       "baseRefOid": "5d17ce83c507dd6c7d2a12308fba6f129a7b7e0d",
       "headRepository": "quicwg/load-balancers",
       "headRefName": "add-transport-parameter",
       "headRefOid": "772bf1e435171bf96bd2c9438135a45abb56a973",
+      "closedAt": "2020-12-11T23:31:39Z",
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [
+        {
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Due to total lack of enthusiasm at IETF 109, closing this PR.",
+          "createdAt": "2020-12-11T23:31:39Z",
+          "updatedAt": "2020-12-11T23:31:39Z"
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "number": 59,
+      "id": "MDExOlB1bGxSZXF1ZXN0NTE1MDk1MzE2",
+      "title": "Aead retry token",
+      "url": "https://github.com/quicwg/load-balancers/pull/59",
+      "state": "OPEN",
+      "author": "huitema",
+      "authorAssociation": "CONTRIBUTOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Close #35 \r\n\r\nThis PR specifies how the retry token should be encoded using AEAD. This replaces the current method that uses AES ECB, and has potential vulnerabilities since encrypted addresses and encrypted ODCID might be encrypted independently. There are differences between the two solutions:\r\n\r\n* AEAD requires key and IV, not just key. The IV will have to be provisioned with the key.\r\n\r\n* AEAD requires a nonce. The proposed format defines a 64 bit \"token sequence number\". We may want to discuss this further, and specify how exactly this is generated.\r\n\r\n* The client address is not encrypted as part of the token, but is verified through AEAD\r\n\r\n* The AEAD protected token may end up 8 bytes longer than the ECB protected token: remove IP address (-16), add a nonce (+8), add the AEAD checksum (+16). On the other hand, the ECB must be padded to the nearest 16 bytes, while AEAD does not require that. Probably not very important.\r\n\r\n* I assume we are using AES128-GCM, but I suppose the specific algorithm could be provisioned with the key.\r\n\r\n\r\n",
+      "createdAt": "2020-11-04T02:30:35Z",
+      "updatedAt": "2020-12-12T00:06:03Z",
+      "baseRepository": "quicwg/load-balancers",
+      "baseRefName": "master",
+      "baseRefOid": "5d17ce83c507dd6c7d2a12308fba6f129a7b7e0d",
+      "headRepository": "huitema/load-balancers",
+      "headRefName": "aead-retry-token",
+      "headRefOid": "847689061f7a1c1866d0fae601c03c19b51da45b",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
-      "comments": [],
-      "reviews": []
+      "comments": [
+        {
+          "author": "huitema",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Waiting for the resolution of the Token Sequence Number issue before updating the PR. I am tempted to just make that field 96 bits, and specify randomness.",
+          "createdAt": "2020-11-04T20:02:02Z",
+          "updatedAt": "2020-11-04T20:02:02Z"
+        },
+        {
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@huitema I think we have five options:\r\n(1) A 96-bit random number for the sequence number, and just assume there are no collisions (you've computed the very low probability) -- this is wire inefficient but very easy\r\n(2) For the shared-state case, the service simply forwards packets with server-generated tokens rather than trying to validate them. Therefore this format is *only* generated by the retry service and it can use all the sequence numbers without fear of collision. -- this is very easy and wire-efficient, but slightly reduces the usefulness of the Retry Service.\r\n\r\nThen there are three variations of \"give each server some of the sequence number space\":\r\n(3a) Just put the whole (up to 18B server ID) in the token: easy, but makes big tokens. The retry service must be configured with at least 1 server ID it can use for its own tokens.\r\n(3b) Force the Retry Service to have the same QUIC-LB decoder as the load balancer, so it can extract the server ID from the CID and use that as part of the IV: most wire-efficient, but expensive for the Retry service.\r\n(3c) Assign each server a shorter ID for Retry purposes, and put in the token: medium token size, but involves the most configuration.\r\n\r\nI weakly prefer (2). if you have a different preference, I'm willing to go along with it; or we could take it to the list.\r\n",
+          "createdAt": "2020-12-12T00:06:03Z",
+          "updatedAt": "2020-12-12T00:06:03Z"
+        }
+      ],
+      "reviews": [
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTIzNTU5NDk5",
+          "commit": {
+            "abbreviatedOid": "8476890"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "Thank you for this PR. I think this design is the way to go, modulo the open questions you've posed.",
+          "createdAt": "2020-11-04T17:01:20Z",
+          "updatedAt": "2020-11-04T17:18:32Z",
+          "comments": [
+            {
+              "originalPosition": 24,
+              "body": "I like the ID of prepending the server ID to the sequence number and assigning the Retry Service one or more \"server IDs\" that keep the sequence number spaces separate, but one problem is that the server ID can be as much as 18 Bytes.\r\n\r\nI see three ways forward:\r\n- assign each server a second server ID for these purposes, (blecch)\r\n- just use random numbers\r\n- eliminate the (already very weak) ability of Shared State Retry Services to validate incoming tokens -- they only generate them. Then, each server can do whatever it wants with its self-generated tokens, which should easily be distinguishable by token length or whatever, and the service can use the entire sequence number space without fear of collision.\r\n\r\nI'm leaning towards the third.",
+              "createdAt": "2020-11-04T17:01:20Z",
+              "updatedAt": "2020-11-04T17:18:32Z"
+            },
+            {
+              "originalPosition": 28,
+              "body": "Can you file a separate issue for that? It applies to both types of Retry Service and we should address it consistently for both.\r\n\r\nI don't feel strongly one way or the other. I believe the point of that check is so that *some* servers enforce compliance to encourage good behavior, and I don't think Retry Services need to be part of that effort.",
+              "createdAt": "2020-11-04T17:10:37Z",
+              "updatedAt": "2020-11-04T17:18:32Z"
+            },
+            {
+              "originalPosition": 101,
+              "body": "Should this make clear that the authentication tag is appended to the end of the token (assuming it is)?",
+              "createdAt": "2020-11-04T17:12:06Z",
+              "updatedAt": "2020-11-04T17:18:32Z"
+            },
+            {
+              "originalPosition": 48,
+              "body": "s/follow/follows",
+              "createdAt": "2020-11-04T17:12:33Z",
+              "updatedAt": "2020-11-04T17:18:32Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTIzNjkwMTI1",
+          "commit": {
+            "abbreviatedOid": "8476890"
+          },
+          "author": "huitema",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-04T19:57:03Z",
+          "updatedAt": "2020-11-04T19:57:04Z",
+          "comments": [
+            {
+              "originalPosition": 24,
+              "body": "Birthday paradox says with a 64 bit random field you will expect collisions after 2^32 tokens -- and that you have to change the key sooner than that if you want to minimize the risk. If you want the risk of collision below 10E-5 (five nines...) then you should not use the key more than 19 million times.\r\n\r\nI should be technically possible to make the identifier 12 bytes long -- that's the normal size of the IV for AES GCM. The same reasoning says that the key should not be use more that 4.0 E+14 times -- 400 trillion times. That may be the way to go. Better than trying to squeeze an 18 bytes ID there.\r\n\r\nOr we would have to use something a bit more exotic than AES GCM, but I would rather not go there.",
+              "createdAt": "2020-11-04T19:57:04Z",
+              "updatedAt": "2020-11-04T19:57:04Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTIzNjkyMDAy",
+          "commit": {
+            "abbreviatedOid": "8476890"
+          },
+          "author": "huitema",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-04T19:59:50Z",
+          "updatedAt": "2020-11-04T19:59:50Z",
+          "comments": [
+            {
+              "originalPosition": 28,
+              "body": "The PN s only used with the RETRY TOKEN format, which is server specific. So it fits naturally in the server specific part.",
+              "createdAt": "2020-11-04T19:59:50Z",
+              "updatedAt": "2020-11-04T19:59:50Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTIzNjkyNDQz",
+          "commit": {
+            "abbreviatedOid": "8476890"
+          },
+          "author": "huitema",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-04T20:00:26Z",
+          "updatedAt": "2020-11-04T20:00:26Z",
+          "comments": [
+            {
+              "originalPosition": 101,
+              "body": "Yes it is. I copied the text from the QUIC-TLS draft, the tag is considered part of the encrypted data.",
+              "createdAt": "2020-11-04T20:00:26Z",
+              "updatedAt": "2020-11-04T20:00:27Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTIzNjkyNjQx",
+          "commit": {
+            "abbreviatedOid": "8476890"
+          },
+          "author": "huitema",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-04T20:00:43Z",
+          "updatedAt": "2020-11-04T20:00:44Z",
+          "comments": [
+            {
+              "originalPosition": 48,
+              "body": "OK, will fix.",
+              "createdAt": "2020-11-04T20:00:44Z",
+              "updatedAt": "2020-11-04T20:00:44Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTIzNjk4NjU1",
+          "commit": {
+            "abbreviatedOid": "8476890"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-04T20:09:57Z",
+          "updatedAt": "2020-11-04T20:09:58Z",
+          "comments": [
+            {
+              "originalPosition": 28,
+              "body": "Yes, but a non-shared-state retry service might be required to include the initial packet number so that the server can do the validation.\r\n\r\nThat said, making the retry service do initial header decryption is a terrible idea. So let's rule out having any type of retry service encode the packet number.",
+              "createdAt": "2020-11-04T20:09:57Z",
+              "updatedAt": "2020-11-04T20:09:58Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTIzNzAxODI3",
+          "commit": {
+            "abbreviatedOid": "8476890"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-04T20:14:57Z",
+          "updatedAt": "2020-11-04T20:14:57Z",
+          "comments": [
+            {
+              "originalPosition": 24,
+              "body": "One way to manage the key rotation would be to actually configure both entities with a secret and make the retry service and server derive the key from that, so that it can be rotated using some signal that the retry service puts in the token?",
+              "createdAt": "2020-11-04T20:14:57Z",
+              "updatedAt": "2020-11-04T20:14:58Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTIzNzAyMDU4",
+          "commit": {
+            "abbreviatedOid": "8476890"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-04T20:15:17Z",
+          "updatedAt": "2020-11-04T20:15:17Z",
+          "comments": [
+            {
+              "originalPosition": 24,
+              "body": "Or we could just do my third option...",
+              "createdAt": "2020-11-04T20:15:17Z",
+              "updatedAt": "2020-11-04T20:15:17Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTIzNzAyNjk0",
+          "commit": {
+            "abbreviatedOid": "8476890"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-04T20:16:13Z",
+          "updatedAt": "2020-11-04T20:16:14Z",
+          "comments": [
+            {
+              "originalPosition": 101,
+              "body": "With the \"opaque\" data and so on it would be helpful to show exactly where the tag goes, so as to leave no ambiguity.",
+              "createdAt": "2020-11-04T20:16:13Z",
+              "updatedAt": "2020-11-04T20:16:14Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 61,
+      "id": "MDExOlB1bGxSZXF1ZXN0NTIyOTExOTQw",
+      "title": "Add ECMP CID algorithm",
+      "url": "https://github.com/quicwg/load-balancers/pull/61",
+      "state": "OPEN",
+      "author": "ianswett",
+      "authorAssociation": "FIRST_TIME_CONTRIBUTOR",
+      "assignees": [],
+      "labels": [],
+      "body": "I tried to make this a subset of the plaintext algorithm, but the differences were substantial enough(ie: there are no server IDs) that I created a new algorithm.",
+      "createdAt": "2020-11-18T04:57:47Z",
+      "updatedAt": "2020-11-18T15:41:44Z",
+      "baseRepository": "quicwg/load-balancers",
+      "baseRefName": "master",
+      "baseRefOid": "5d17ce83c507dd6c7d2a12308fba6f129a7b7e0d",
+      "headRepository": "ianswett/load-balancers",
+      "headRefName": "patch-1",
+      "headRefOid": "7f02a62f66b2b3945f42e4678f37b227871c1e04",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "@ianswett I'm a bit confused on the difference here with the vanilla plaintext algorithm. Is the only difference that the LB routes initial packets specially? Does the existing plaintext algorithm preclude that behavior?",
+          "createdAt": "2020-11-18T07:35:53Z",
+          "updatedAt": "2020-11-18T07:35:53Z"
+        },
+        {
+          "author": "ianswett",
+          "authorAssociation": "NONE",
+          "body": "I don't think it's precluded, but I do think it's different enough it's worth documenting, but I realize the difference is subtle.  @martinduke had the same thought, so I'll try to further clarify this PR.\r\n\r\nThis is a way to adapt existing stateful flow-tracking ECMP L4 load-balancers to QUIC with almost no server coordination.  The plaintext requires substantially more coordination and requires leaving some areas of the connection ID space unusable in order to allow for adding servers.  When each new flow comes in, the L4 load-balancer can decide where to send it, increasing the evenness of traffic.",
+          "createdAt": "2020-11-18T15:41:43Z",
+          "updatedAt": "2020-11-18T15:41:43Z"
+        }
+      ],
+      "reviews": [
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTMzMTEwNTk0",
+          "commit": {
+            "abbreviatedOid": "7f02a62"
+          },
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-18T05:17:21Z",
+          "updatedAt": "2020-11-18T05:17:21Z",
+          "comments": [
+            {
+              "originalPosition": 31,
+              "body": "```suggestion\r\nbeginning with the second octet. If these octets match an existing server ID,\r\n```",
+              "createdAt": "2020-11-18T05:17:21Z",
+              "updatedAt": "2020-11-18T05:17:21Z"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
