@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2020-12-16T00:02:58.591881+00:00",
+  "timestamp": "2020-12-18T16:38:35.584135+00:00",
   "repo": "quicwg/load-balancers",
   "labels": [
     {
@@ -650,15 +650,15 @@
       "id": "MDU6SXNzdWU2NDkzODQyODg=",
       "title": "Using ECB for retry tokens seems sub optimal",
       "url": "https://github.com/quicwg/load-balancers/issues/35",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "huitema",
       "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "Section 5.3 specifies a  Shared-State Retry Service describes a token format in which the token include the ODCID, a client IP encoded on 128 bits, and a 20 octets data-time, plus additional data. The token is encrypted using AES ECB. This seems sub-optimal:\r\n\r\n1) Using AES GCM or another AEAD format seems more natural. AEAD checks will immediately detect an invalid token, while using ECB forces reliance on invalidity heuristics.\r\n\r\n2) If using AEAD, there is no need to encode the IP address in the token. It can be derived from the IP header and placed in a pseudo header. The pseudo header can then be authenticated as part of AEAD decryption.\r\n\r\n3) The pseudo header approach can be used to authenticate other fields, e.g. verify that the DCID matches the SCID sent in the Retry packet.\r\n\r\n4) Encoding the time as 64 bits time64_t seems more natural than ASCII encoding, and also shorter.\r\n",
       "createdAt": "2020-07-01T23:03:07Z",
-      "updatedAt": "2020-11-04T02:31:21Z",
-      "closedAt": null,
+      "updatedAt": "2020-12-18T16:38:02Z",
+      "closedAt": "2020-12-18T16:38:02Z",
       "comments": [
         {
           "author": "huitema",
@@ -1239,6 +1239,22 @@
       "body": "@ianswett proposed a PCID design that assigns SIDs on the fly instead of having to pre-configure them. There are drawbacks but it has some nice properties.",
       "createdAt": "2020-12-12T01:21:15Z",
       "updatedAt": "2020-12-12T01:21:15Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 65,
+      "id": "MDU6SXNzdWU3Njk1OTY2NDg=",
+      "title": "Cryptographic agility",
+      "url": "https://github.com/quicwg/load-balancers/issues/65",
+      "state": "OPEN",
+      "author": "martinthomson",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "The stream and block cipher configuration are locked to AES-ECB.  AES-128-ECB too (this needs to be clear).\r\n\r\nThis is a fine design.  If a better design is required, that can be achieved by adding a new arm to `routing_algorithm`.  It might pay to say that and cite https://tools.ietf.org/html/rfc7696 at the same time.",
+      "createdAt": "2020-12-17T06:46:03Z",
+      "updatedAt": "2020-12-17T06:46:03Z",
       "closedAt": null,
       "comments": []
     }
@@ -3064,24 +3080,26 @@
       "id": "MDExOlB1bGxSZXF1ZXN0NTE1MDk1MzE2",
       "title": "Aead retry token",
       "url": "https://github.com/quicwg/load-balancers/pull/59",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "huitema",
       "authorAssociation": "CONTRIBUTOR",
       "assignees": [],
       "labels": [],
       "body": "Close #35 \r\n\r\nThis PR specifies how the retry token should be encoded using AEAD. This replaces the current method that uses AES ECB, and has potential vulnerabilities since encrypted addresses and encrypted ODCID might be encrypted independently. There are differences between the two solutions:\r\n\r\n* AEAD requires key and IV, not just key. The IV will have to be provisioned with the key.\r\n\r\n* AEAD requires a nonce. The proposed format defines a 64 bit \"token sequence number\". We may want to discuss this further, and specify how exactly this is generated.\r\n\r\n* The client address is not encrypted as part of the token, but is verified through AEAD\r\n\r\n* The AEAD protected token may end up 8 bytes longer than the ECB protected token: remove IP address (-16), add a nonce (+8), add the AEAD checksum (+16). On the other hand, the ECB must be padded to the nearest 16 bytes, while AEAD does not require that. Probably not very important.\r\n\r\n* I assume we are using AES128-GCM, but I suppose the specific algorithm could be provisioned with the key.\r\n\r\n\r\n",
       "createdAt": "2020-11-04T02:30:35Z",
-      "updatedAt": "2020-12-13T01:14:48Z",
+      "updatedAt": "2020-12-18T16:38:02Z",
       "baseRepository": "quicwg/load-balancers",
       "baseRefName": "master",
       "baseRefOid": "5d17ce83c507dd6c7d2a12308fba6f129a7b7e0d",
       "headRepository": "huitema/load-balancers",
       "headRefName": "aead-retry-token",
-      "headRefOid": "12b9c6449331c7f5821a18f2d821f56a16e97568",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "headRefOid": "a926e3cf8c71c394a9c5020460ab2719657a07c3",
+      "closedAt": "2020-12-18T16:38:02Z",
+      "mergedAt": "2020-12-18T16:38:02Z",
+      "mergedBy": "martinduke",
+      "mergeCommit": {
+        "oid": "596688a9c0a8ca414c3d83570f197994e6db5c93"
+      },
       "comments": [
         {
           "author": "huitema",
@@ -3131,6 +3149,27 @@
           "body": "I have tried to elaborate the two options for either random generation or server ID.",
           "createdAt": "2020-12-13T01:14:48Z",
           "updatedAt": "2020-12-13T01:14:48Z"
+        },
+        {
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "BTW I am happy to commit if you resolve the nits and we can have a longer discussion on your DISCUSS points.",
+          "createdAt": "2020-12-16T22:10:12Z",
+          "updatedAt": "2020-12-16T22:10:12Z"
+        },
+        {
+          "author": "huitema",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@martinduke I think this is ready now, but you may want to review.",
+          "createdAt": "2020-12-17T04:40:27Z",
+          "updatedAt": "2020-12-17T04:40:27Z"
+        },
+        {
+          "author": "huitema",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@martinduke I think the last commit fixes the last comments.",
+          "createdAt": "2020-12-18T04:37:15Z",
+          "updatedAt": "2020-12-18T04:37:15Z"
         }
       ],
       "reviews": [
@@ -3150,25 +3189,25 @@
               "originalPosition": 24,
               "body": "I like the ID of prepending the server ID to the sequence number and assigning the Retry Service one or more \"server IDs\" that keep the sequence number spaces separate, but one problem is that the server ID can be as much as 18 Bytes.\r\n\r\nI see three ways forward:\r\n- assign each server a second server ID for these purposes, (blecch)\r\n- just use random numbers\r\n- eliminate the (already very weak) ability of Shared State Retry Services to validate incoming tokens -- they only generate them. Then, each server can do whatever it wants with its self-generated tokens, which should easily be distinguishable by token length or whatever, and the service can use the entire sequence number space without fear of collision.\r\n\r\nI'm leaning towards the third.",
               "createdAt": "2020-11-04T17:01:20Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             },
             {
               "originalPosition": 28,
               "body": "Can you file a separate issue for that? It applies to both types of Retry Service and we should address it consistently for both.\r\n\r\nI don't feel strongly one way or the other. I believe the point of that check is so that *some* servers enforce compliance to encourage good behavior, and I don't think Retry Services need to be part of that effort.",
               "createdAt": "2020-11-04T17:10:37Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             },
             {
               "originalPosition": 101,
               "body": "Should this make clear that the authentication tag is appended to the end of the token (assuming it is)?",
               "createdAt": "2020-11-04T17:12:06Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             },
             {
               "originalPosition": 48,
               "body": "s/follow/follows",
               "createdAt": "2020-11-04T17:12:33Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             }
           ]
         },
@@ -3188,7 +3227,7 @@
               "originalPosition": 24,
               "body": "Birthday paradox says with a 64 bit random field you will expect collisions after 2^32 tokens -- and that you have to change the key sooner than that if you want to minimize the risk. If you want the risk of collision below 10E-5 (five nines...) then you should not use the key more than 19 million times.\r\n\r\nI should be technically possible to make the identifier 12 bytes long -- that's the normal size of the IV for AES GCM. The same reasoning says that the key should not be use more that 4.0 E+14 times -- 400 trillion times. That may be the way to go. Better than trying to squeeze an 18 bytes ID there.\r\n\r\nOr we would have to use something a bit more exotic than AES GCM, but I would rather not go there.",
               "createdAt": "2020-11-04T19:57:04Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             }
           ]
         },
@@ -3208,7 +3247,7 @@
               "originalPosition": 28,
               "body": "The PN s only used with the RETRY TOKEN format, which is server specific. So it fits naturally in the server specific part.",
               "createdAt": "2020-11-04T19:59:50Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             }
           ]
         },
@@ -3228,7 +3267,7 @@
               "originalPosition": 101,
               "body": "Yes it is. I copied the text from the QUIC-TLS draft, the tag is considered part of the encrypted data.",
               "createdAt": "2020-11-04T20:00:26Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             }
           ]
         },
@@ -3248,7 +3287,7 @@
               "originalPosition": 48,
               "body": "OK, will fix.",
               "createdAt": "2020-11-04T20:00:44Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             }
           ]
         },
@@ -3268,7 +3307,7 @@
               "originalPosition": 28,
               "body": "Yes, but a non-shared-state retry service might be required to include the initial packet number so that the server can do the validation.\r\n\r\nThat said, making the retry service do initial header decryption is a terrible idea. So let's rule out having any type of retry service encode the packet number.",
               "createdAt": "2020-11-04T20:09:57Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             }
           ]
         },
@@ -3288,7 +3327,7 @@
               "originalPosition": 24,
               "body": "One way to manage the key rotation would be to actually configure both entities with a secret and make the retry service and server derive the key from that, so that it can be rotated using some signal that the retry service puts in the token?",
               "createdAt": "2020-11-04T20:14:57Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             }
           ]
         },
@@ -3308,7 +3347,7 @@
               "originalPosition": 24,
               "body": "Or we could just do my third option...",
               "createdAt": "2020-11-04T20:15:17Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
             }
           ]
         },
@@ -3328,7 +3367,205 @@
               "originalPosition": 101,
               "body": "With the \"opaque\" data and so on it would be helpful to show exactly where the tag goes, so as to leave no ambiguity.",
               "createdAt": "2020-11-04T20:16:13Z",
-              "updatedAt": "2020-12-13T01:12:18Z"
+              "updatedAt": "2020-12-18T16:37:14Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTU0MTEyODk3",
+          "commit": {
+            "abbreviatedOid": "12b9c64"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "CHANGES_REQUESTED",
+          "body": "",
+          "createdAt": "2020-12-16T21:50:15Z",
+          "updatedAt": "2020-12-16T22:08:37Z",
+          "comments": [
+            {
+              "originalPosition": 12,
+              "body": "Can we call this a \"generator ID\", in order to (1) not confuse it with the load balancing server ID, and (2) to make clear that the retry service will need at least one too?",
+              "createdAt": "2020-12-16T21:50:15Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 40,
+              "body": "s/keyand/key and",
+              "createdAt": "2020-12-16T21:51:17Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 94,
+              "body": "If it's the expiration time, then each token generator can specify its own token expiration time; it it's the start time, than the token consumer is always in control of the expiration. The difference is not huge. Consumer decisions happen later, and therefore have (slightly) more information. This is related to your DISCUSS point at Line 871; if the Retry service isn't checking timestamps, than it seems easier to configure if only the servers need to worry about the proper expiration interval.\r\n\r\nI don't feel strongly either way.",
+              "createdAt": "2020-12-16T22:02:32Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 193,
+              "body": "Why wouldn't it? As there are multiple token generators in this model, the time thresholds are going to have be forgiving about clock skew anyway.",
+              "createdAt": "2020-12-16T22:05:56Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 176,
+              "body": "The Retry Service also needs a \"generator ID\". Arguably, it would make sense to have more than one (it presumably will generate tokens in much higher volume).",
+              "createdAt": "2020-12-16T22:07:45Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTU0MTg3NjM4",
+          "commit": {
+            "abbreviatedOid": "12b9c64"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-12-17T00:16:40Z",
+          "updatedAt": "2020-12-17T00:16:40Z",
+          "comments": [
+            {
+              "originalPosition": 12,
+              "body": "We agreed over the phone not to have a \"controlled\" configuration, so we'll just consolidate these two fields into a 96-bit nonce.",
+              "createdAt": "2020-12-17T00:16:40Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTU0MTg4MTY1",
+          "commit": {
+            "abbreviatedOid": "12b9c64"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-12-17T00:17:56Z",
+          "updatedAt": "2020-12-17T00:17:57Z",
+          "comments": [
+            {
+              "originalPosition": 94,
+              "body": "We talked and realized that as the NEW_TOKEN is also following this format, it is far better for the token to encode the expiration time so as not to force the Service to implement multiple policies and disambiguate the two types.",
+              "createdAt": "2020-12-17T00:17:57Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTU0MTg4MjU2",
+          "commit": {
+            "abbreviatedOid": "12b9c64"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-12-17T00:18:13Z",
+          "updatedAt": "2020-12-17T00:18:14Z",
+          "comments": [
+            {
+              "originalPosition": 176,
+              "body": "Disregard, no server IDs anymore",
+              "createdAt": "2020-12-17T00:18:14Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTU0MTg4NDA0",
+          "commit": {
+            "abbreviatedOid": "12b9c64"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-12-17T00:18:36Z",
+          "updatedAt": "2020-12-17T00:18:36Z",
+          "comments": [
+            {
+              "originalPosition": 193,
+              "body": "Result of call: yes, the service should look at the timestamp (with allowances for clock skew)",
+              "createdAt": "2020-12-17T00:18:36Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTU1MDgwOTY0",
+          "commit": {
+            "abbreviatedOid": "1547d4b"
+          },
+          "author": "martinduke",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "APPROVED",
+          "body": "Looks great! If my proposed nits seem reasonable to you, hit commit on each of them and then I'll merge this.",
+          "createdAt": "2020-12-17T23:57:35Z",
+          "updatedAt": "2020-12-18T00:32:49Z",
+          "comments": [
+            {
+              "originalPosition": 32,
+              "body": "```suggestion\r\nAEAD key and AEAD IV are provisioned by the configuration agent. \r\n```",
+              "createdAt": "2020-12-18T00:02:09Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 33,
+              "body": "```suggestion\r\n```",
+              "createdAt": "2020-12-18T00:02:20Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 112,
+              "body": "```suggestion\r\nThe tokens are protected using AES128-GCM as follows:\r\n```",
+              "createdAt": "2020-12-18T00:16:03Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 117,
+              "body": "```suggestion\r\n```",
+              "createdAt": "2020-12-18T00:17:40Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 116,
+              "body": "```suggestion\r\n*\r\n```",
+              "createdAt": "2020-12-18T00:18:04Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 118,
+              "body": "```suggestion\r\n\r\n```",
+              "createdAt": "2020-12-18T00:19:04Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 12,
+              "body": "```suggestion\r\n- A 96 bit unique token number transmitted in clear text, but\r\n```",
+              "createdAt": "2020-12-18T00:19:21Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 27,
+              "body": "```suggestion\r\nThe 96 bit unique token number is set to a random value\r\n```",
+              "createdAt": "2020-12-18T00:19:40Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 120,
+              "body": "```suggestion\r\nwith zeros to the size of the IV. The exclusive OR of the padded unique token\r\n```",
+              "createdAt": "2020-12-18T00:20:39Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
+            },
+            {
+              "originalPosition": 148,
+              "body": "```suggestion\r\nof the AEAD is transmitted in place of the token body.\r\n```",
+              "createdAt": "2020-12-18T00:21:07Z",
+              "updatedAt": "2020-12-18T16:37:14Z"
             }
           ]
         }
