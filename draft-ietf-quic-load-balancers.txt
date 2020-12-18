@@ -120,7 +120,7 @@ Internet-Draft                   QUIC-LB                   December 2020
        6.3.3.  Service Requirements  . . . . . . . . . . . . . . . .  21
        6.3.4.  Server Requirements . . . . . . . . . . . . . . . . .  21
    7.  Configuration Requirements  . . . . . . . . . . . . . . . . .  22
-   8.  Additional Use Cases  . . . . . . . . . . . . . . . . . . . .  23
+   8.  Additional Use Cases  . . . . . . . . . . . . . . . . . . . .  24
      8.1.  Load balancer chains  . . . . . . . . . . . . . . . . . .  24
      8.2.  Moving connections between servers  . . . . . . . . . . .  24
    9.  Version Invariance of QUIC-LB . . . . . . . . . . . . . . . .  24
@@ -140,20 +140,20 @@ Internet-Draft                   QUIC-LB                   December 2020
      A.3.  Block Cipher Connection ID Algorithm  . . . . . . . . . .  30
    Appendix B.  Acknowledgments  . . . . . . . . . . . . . . . . . .  31
    Appendix C.  Change Log . . . . . . . . . . . . . . . . . . . . .  31
-     C.1.  since draft-ietf-quic-load-balancers-04 . . . . . . . . .  31
-     C.2.  since-draft-ietf-quic-load-balancers-03 . . . . . . . . .  32
-     C.3.  since-draft-ietf-quic-load-balancers-02 . . . . . . . . .  32
-     C.4.  since-draft-ietf-quic-load-balancers-01 . . . . . . . . .  32
-     C.5.  since-draft-ietf-quic-load-balancers-00 . . . . . . . . .  32
-     C.6.  Since draft-duke-quic-load-balancers-06 . . . . . . . . .  32
-     C.7.  Since draft-duke-quic-load-balancers-05 . . . . . . . . .  32
-     C.8.  Since draft-duke-quic-load-balancers-04 . . . . . . . . .  33
-     C.9.  Since draft-duke-quic-load-balancers-03 . . . . . . . . .  33
-     C.10. Since draft-duke-quic-load-balancers-02 . . . . . . . . .  33
-     C.11. Since draft-duke-quic-load-balancers-01 . . . . . . . . .  33
-     C.12. Since draft-duke-quic-load-balancers-00 . . . . . . . . .  33
+     C.1.  since draft-ietf-quic-load-balancers-05 . . . . . . . . .  31
+     C.2.  since draft-ietf-quic-load-balancers-04 . . . . . . . . .  32
+     C.3.  since-draft-ietf-quic-load-balancers-03 . . . . . . . . .  32
+     C.4.  since-draft-ietf-quic-load-balancers-02 . . . . . . . . .  32
+     C.5.  since-draft-ietf-quic-load-balancers-01 . . . . . . . . .  32
+     C.6.  since-draft-ietf-quic-load-balancers-00 . . . . . . . . .  33
+     C.7.  Since draft-duke-quic-load-balancers-06 . . . . . . . . .  33
+     C.8.  Since draft-duke-quic-load-balancers-05 . . . . . . . . .  33
+     C.9.  Since draft-duke-quic-load-balancers-04 . . . . . . . . .  33
+     C.10. Since draft-duke-quic-load-balancers-03 . . . . . . . . .  33
+     C.11. Since draft-duke-quic-load-balancers-02 . . . . . . . . .  33
+     C.12. Since draft-duke-quic-load-balancers-01 . . . . . . . . .  34
+     C.13. Since draft-duke-quic-load-balancers-00 . . . . . . . . .  34
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  34
-
 
 
 
@@ -998,7 +998,7 @@ Internet-Draft                   QUIC-LB                   December 2020
    key to rewrite the Retry token accordingly.
 
    The 96 bit unique token number is set to a random value using a
-   cryptography grade random number generator.
+   cryptography- grade random number generator.
 
    The token key identifier and the corresponding AEAD key and AEAD IV
    are provisioned by the configuration agent.
@@ -1090,10 +1090,10 @@ Internet-Draft                   QUIC-LB                   December 2020
       padded unique token number and the IV forms the AEAD nonce.
 
    *  The associated data is a formatted as a pseudo header by combining
-      the clear-text part of the token with the IP address of the
-      client. ~~~~~ 0 1 2 3 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-      2 3 4 5 6 7 8 9 0 1 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-      +-+-+-+-+-+-+-+-+-+ | |
+      the cleartext part of the token with the IP address of the client.
+      ~~~~~ 0 1 2 3 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+      6 7 8 9 0 1 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+      +-+-+-+-+-+ | |
 
    *  + | |
 
@@ -1138,13 +1138,16 @@ Internet-Draft                   QUIC-LB                   December 2020
    In active mode, the service SHOULD decrypt the incoming tokens.  The
    service SHOULD drop packets with unknown key sequence, or an AEAD
    checksum that does not match the expected value.  (By construction,
-   the AEAD checksum will only match is the client IP Address also
-   matches.)  The service SHOULD drop packets if the Timestamp of the
-   retry token points to a past date; however, in order to allow for
-   clock skew, it SHOULD NOT drop packets if the Timestamp merely points
-   to a a few seconds in the past.  It SHOULD forward packets if the
-   AEAD checksum and the Timestamp can be verified, regardless of the
-   other fields.
+   the AEAD checksum will only match if the client IP Address also
+   matches.)
+
+   The service SHOULD drop packets if the Timestamp of the retry token
+   points to a past date; however, in order to allow for clock skew, it
+   SHOULD NOT drop packets if the Timestamp merely points to a a few
+   seconds in the past.
+
+   It SHOULD forward packets if the AEAD checksum and the Timestamp can
+   be verified, regardless of the other fields.
 
    However, the service MUST NOT decrypt or validate tokens if there is
    a NAT between it and the servers.
@@ -1164,11 +1167,8 @@ Internet-Draft                   QUIC-LB                   December 2020
    The server MUST validate all tokens that arrive in Initial packets,
    as they may have bypassed the Retry service.
 
-   For Retry tokens that follow the format above, servers SHOULD use the
-   timestamp field to apply its expiration limits for tokens.  This need
-   not be precisely synchronized with the retry service.  However,
-   servers MAY allow retry tokens marked as being a few seconds in the
-   past, due to possible clock synchronization issues.
+
+
 
 
 
@@ -1177,6 +1177,12 @@ Duke & Banks              Expires 21 June 2021                 [Page 21]
 
 Internet-Draft                   QUIC-LB                   December 2020
 
+
+   For Retry tokens that follow the format above, servers SHOULD use the
+   timestamp field to apply its expiration limits for tokens.  This need
+   not be precisely synchronized with the retry service.  However,
+   servers MAY allow retry tokens marked as being a few seconds in the
+   past, due to possible clock synchronization issues.
 
    After decrypting the token, the server uses the corresponding fields
    to populate the original_destination_connection_id transport
@@ -1220,12 +1226,6 @@ Internet-Draft                   QUIC-LB                   December 2020
    QUIC versions of any Retry Service.  If a shared-state service, the
    server also must have the token key.
 
-   A non-shared-state Retry Service need only be configured with the
-   QUIC versions it supports.  A shared-state Retry Service also needs
-   the token key, and to be aware if a NAT sits between it and the
-   servers.
-
-
 
 
 
@@ -1233,6 +1233,11 @@ Duke & Banks              Expires 21 June 2021                 [Page 22]
 
 Internet-Draft                   QUIC-LB                   December 2020
 
+
+   A non-shared-state Retry Service need only be configured with the
+   QUIC versions it supports.  A shared-state Retry Service also needs
+   the token key, and to be aware if a NAT sits between it and the
+   servers.
 
    The following pseudocode describes the data items necessary to store
    a full QUIC-LB configuration at the server.  It is meant to describe
@@ -1249,6 +1254,8 @@ Internet-Draft                   QUIC-LB                   December 2020
         case shared_state: {
             uint32   list_of_quic_versions[];
             uint8    token_key[16];
+            uint8    token_iv[8];
+            uint8    key_sequence_number;
         } shared_state_config;
     } retry_service_config;
     enum     { none, plaintext, stream_cipher, block_cipher }
@@ -1272,13 +1279,6 @@ Internet-Draft                   QUIC-LB                   December 2020
         } block_cipher_config;
    } routing_algorithm_config;
 
-8.  Additional Use Cases
-
-   This section discusses considerations for some deployment scenarios
-   not implied by the specification above.
-
-
-
 
 
 
@@ -1289,6 +1289,11 @@ Duke & Banks              Expires 21 June 2021                 [Page 23]
 
 Internet-Draft                   QUIC-LB                   December 2020
 
+
+8.  Additional Use Cases
+
+   This section discusses considerations for some deployment scenarios
+   not implied by the specification above.
 
 8.1.  Load balancer chains
 
@@ -1333,11 +1338,6 @@ Internet-Draft                   QUIC-LB                   December 2020
    deploy new versions of QUIC.  However, there are several unlikely
    future design decisions that could impact the operation of QUIC-LB.
 
-   The maximum Connection ID length could be below the minimum necessary
-   for one or more encoding algorithms.
-
-
-
 
 
 
@@ -1345,6 +1345,9 @@ Duke & Banks              Expires 21 June 2021                 [Page 24]
 
 Internet-Draft                   QUIC-LB                   December 2020
 
+
+   The maximum Connection ID length could be below the minimum necessary
+   for one or more encoding algorithms.
 
    Section 4 provides guidance about how load balancers should handle
    non-compliant DCIDs.  This guidance, and the implementation of an
@@ -1391,9 +1394,6 @@ Internet-Draft                   QUIC-LB                   December 2020
    new Connection ID in the event of config rotation Section 3.1.  Doing
    so might falsely suggest to the client that said CIDs were generated
    in a secure fashion.
-
-
-
 
 
 
@@ -1713,22 +1713,22 @@ Internet-Draft                   QUIC-LB                   December 2020
 
 Appendix B.  Acknowledgments
 
-   The authors would like to thank Christian Huitema and Martin Thomson
-   for their text contributions and detailed reviews.
+   The authors would like to thank Christian Huitema for his major
+   design contributions.
+
+   Manasi Deval, Erik Fuller, Toma Gavrichenkov, Jana Iyengar, Subodh
+   Iyengar, Ling Tao Nju, Kazuho Oku, Udip Pant, Ian Swett, Martin
+   Thomson, Dmitri Tikhonov, Victor Vasiliev, and William Zeng Ke all
+   provided useful input.
 
 Appendix C.  Change Log
 
       *RFC Editor's Note:* Please remove this section prior to
       publication of a final version of this document.
 
-C.1.  since draft-ietf-quic-load-balancers-04
+C.1.  since draft-ietf-quic-load-balancers-05
 
-   *  Rearranged the shared-state retry token to simplify token
-      processing
-
-   *  More compact timestamp in shared-state retry token
-
-   *  Revised server requirements for shared-state retries
+   *  Complete revision of shared-state Retry Token
 
 
 
@@ -1738,13 +1738,22 @@ Duke & Banks              Expires 21 June 2021                 [Page 31]
 Internet-Draft                   QUIC-LB                   December 2020
 
 
+C.2.  since draft-ietf-quic-load-balancers-04
+
+   *  Rearranged the shared-state retry token to simplify token
+      processing
+
+   *  More compact timestamp in shared-state retry token
+
+   *  Revised server requirements for shared-state retries
+
    *  Eliminated zero padding from the test vectors
 
    *  Added server use bytes to the test vectors
 
    *  Additional compliant DCID criteria
 
-C.2.  since-draft-ietf-quic-load-balancers-03
+C.3.  since-draft-ietf-quic-load-balancers-03
 
    *  Improved Config Rotation text
 
@@ -1752,7 +1761,7 @@ C.2.  since-draft-ietf-quic-load-balancers-03
 
    *  Deleted the Obfuscated CID algorithm
 
-C.3.  since-draft-ietf-quic-load-balancers-02
+C.4.  since-draft-ietf-quic-load-balancers-02
 
    *  Replaced stream cipher algorithm with three-pass version
 
@@ -1766,7 +1775,7 @@ C.3.  since-draft-ietf-quic-load-balancers-02
 
    *  Allow dropped long-header packets for known QUIC versions
 
-C.4.  since-draft-ietf-quic-load-balancers-01
+C.5.  since-draft-ietf-quic-load-balancers-01
 
    *  Test vectors for load balancer decoding
 
@@ -1776,15 +1785,6 @@ C.4.  since-draft-ietf-quic-load-balancers-01
 
    *  Discussed load balancer chains
 
-C.5.  since-draft-ietf-quic-load-balancers-00
-
-   *  Removed in-band protocol from the document
-
-C.6.  Since draft-duke-quic-load-balancers-06
-
-   *  Switch to IETF WG draft.
-
-C.7.  Since draft-duke-quic-load-balancers-05
 
 
 
@@ -1793,6 +1793,16 @@ Duke & Banks              Expires 21 June 2021                 [Page 32]
 
 Internet-Draft                   QUIC-LB                   December 2020
 
+
+C.6.  since-draft-ietf-quic-load-balancers-00
+
+   *  Removed in-band protocol from the document
+
+C.7.  Since draft-duke-quic-load-balancers-06
+
+   *  Switch to IETF WG draft.
+
+C.8.  Since draft-duke-quic-load-balancers-05
 
    *  Editorial changes
 
@@ -1806,11 +1816,11 @@ Internet-Draft                   QUIC-LB                   December 2020
 
    *  Added psuedocode for config schema
 
-C.8.  Since draft-duke-quic-load-balancers-04
+C.9.  Since draft-duke-quic-load-balancers-04
 
    *  Added standard for retry services
 
-C.9.  Since draft-duke-quic-load-balancers-03
+C.10.  Since draft-duke-quic-load-balancers-03
 
    *  Renamed Plaintext CID algorithm as Obfuscated CID
 
@@ -1820,7 +1830,7 @@ C.9.  Since draft-duke-quic-load-balancers-03
 
    *  Added self-encoding of CID length
 
-C.10.  Since draft-duke-quic-load-balancers-02
+C.11.  Since draft-duke-quic-load-balancers-02
 
    *  Added Config Rotation
 
@@ -1832,16 +1842,6 @@ C.10.  Since draft-duke-quic-load-balancers-02
 
    *  Reformatted QUIC-LB packets
 
-C.11.  Since draft-duke-quic-load-balancers-01
-
-   *  Complete rewrite
-
-   *  Supports multiple security levels
-
-   *  Lightweight messages
-
-C.12.  Since draft-duke-quic-load-balancers-00
-
 
 
 
@@ -1849,6 +1849,16 @@ Duke & Banks              Expires 21 June 2021                 [Page 33]
 
 Internet-Draft                   QUIC-LB                   December 2020
 
+
+C.12.  Since draft-duke-quic-load-balancers-01
+
+   *  Complete rewrite
+
+   *  Supports multiple security levels
+
+   *  Lightweight messages
+
+C.13.  Since draft-duke-quic-load-balancers-00
 
    *  Converted to markdown
 
@@ -1866,16 +1876,6 @@ Authors' Addresses
    Microsoft
 
    Email: nibanks@microsoft.com
-
-
-
-
-
-
-
-
-
-
 
 
 
